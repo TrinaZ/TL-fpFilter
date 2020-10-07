@@ -1,0 +1,74 @@
+#!/usr/bin/python3
+#@File: ExtractSvInfo.py
+#-*-coding:utf-8-*-
+#python3 ExtractSvInfo.py speed.sv.vcf speed.sv_info.csv
+import os,csv
+from operator import itemgetter
+
+def extractInLine1(string,label):
+	dic = dict()
+	if string.find('IMPRECISE') != -1:
+		dic['IMPRECISE'] = '1'
+	else:
+		dic['IMPRECISE'] = '0'
+	if string.find('SECONDARY') != -1:
+		dic['SECONDARY'] = '1'
+	else:
+		dic['SECONDARY'] = '0'
+	string = string.split(';')
+	for item in string:
+		item = item.split('=')
+		if len(item)==2:
+			dic[item[0]] = item[1]
+	if 'DISC_MAPQ' not in dic:
+		dic['DISC_MAPQ'] = '-1'
+	res = itemgetter(*label)(dic)
+	result = dict(zip(label, res))
+	return result
+def extractInLine2(label,string):
+	label = label.split(':')
+	string = string.split(':')
+	dic = dict(zip(label, string))
+	return dic
+if __name__ == '__main__':
+	# root = r"C:\Users\Administrator\Desktop\untitled\python3\real_data\unfiltered"
+	root = r"C:\Users\Administrator\Desktop\untitled\python3\real_data\filtered"
+	os.chdir(root)
+	Filelist = os.listdir(root)
+	info_name = ['CHROM','POS','QUAL','FILTER','DISC_MAPQ','EVDNC','IMPRECISE','MAPQ','MATENM','NM','NUMPARTS','SECONDARY',
+	             'GT','AD','DP','GQ','PL','SR','DR','LR','LO']
+	label = ['DISC_MAPQ','EVDNC','IMPRECISE','MAPQ','MATENM','NM','NUMPARTS','SECONDARY']
+	for file in Filelist:
+		input_file = file
+		output_file = file.split('.')[0]+"_info."+file.split('.')[1]+".csv"
+		fin = open(input_file,'r')
+		fout = open(output_file,'w',newline='')
+		info_list = []
+		for line in fin.readlines():
+			if line[0] == '#':
+				continue
+			else :
+				info = dict()
+				line = line.split()
+				info['CHROM'] = line[0]
+				info['POS'] = line[1]
+				info['QUAL'] = line[5]
+				info['FILTER'] = line[6]
+				temp = line[7]
+				result1 = extractInLine1(temp,label)
+				result2 = extractInLine2(line[8],line[9])
+				z = result1.copy()
+				z.update(result2)
+				dicts = info.copy()
+				dicts.update(z)
+				info_list.append(dicts)
+		# 获取表头列名列表
+		headers = info_name
+		writer = csv.DictWriter(fout, fieldnames=headers,delimiter='\t')
+		# 写入表头
+		writer.writeheader()
+		# 写入数据行
+		for row in info_list:
+			writer.writerow(row)
+		fin.close()
+		fout.close()
